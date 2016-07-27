@@ -1,0 +1,81 @@
+
+    其中单引号中的被大括号括着的就是awk的语句，注意，其只能被单引号包含。
+    其中的$1..$n表示第几例。注：$0表示整个行。
+
+ awk '{print $1, $4}' netstat.txt
+
+ print 自带换行  
+ printf 不带换行
+
+ 看看awk的格式化输出，和C语言的printf没什么两样
+ awk '{printf "%-8s %-8s %-8s %-18s %-22s %-15s\n",$1,$2,$3,$4,$5,$6}' netstat.txt
+
+过滤记录（下面过滤条件为：第三列的值为0 && 第6列的值为LISTEN）
+ awk '$3==0 && $6=="LISTEN" ' netstat.txt
+
+ awk ' $3>0 {print $0}' netstat.txt
+ 如果我们需要表头的话，我们可以引入内建变量NR
+ awk '$3==0 && $6=="LISTEN" || NR==1 ' netstat.txt  //输出全部的第一行
+ awk '$3==0 && $6=="LISTEN" || NR==1 {printf "%-20s %-20s %s\n",$4,$5,$6}' netstat.txt
+ 
+ 内建变量
+
+说到了内建变量，我们可以来看看awk的一些内建变量：
+$0 	当前记录（这个变量中存放着整个行的内容）
+$1~$n 	当前记录的第n个字段，字段间由FS分隔
+FS 	输入字段分隔符 默认是空格或Tab
+NF 	当前记录中的字段个数，就是有多少列
+NR 	已经读出的记录数，就是行号，从1开始，如果有多个文件话，这个值也是不断累加中。
+FNR 	当前记录数，与NR不同的是，这个值会是各个文件自己的行号
+RS 	输入的记录分隔符， 默认为换行符
+OFS 	输出字段分隔符， 默认也是空格
+ORS 	输出的记录分隔符，默认为换行符
+FILENAME 	当前输入文件的名字
+
+指定分隔符
+awk -F: '{print $1,$3,$6}' passwd.txt
+等价于:
+awk  'BEGIN{FS=":"} {print $1,$3,$6}' passwd.txt
+注：如果你要指定多个分隔符，你可以这样来：	
+awk -F '[;:]'  '{print $1,$3,$6}' passwd.txt
+
+字符串匹配 
+下面是对第六列中进行FIN的正则
+awk '$6 ~ /FIN/ || NR==1 {print NR,$4,$5,$6}' OFS="\t" netstat.txt
+awk '$6 ~ /WAIT/ || NR==1 {print NR,$4,$5,$6}' OFS="\t" netstat.txt
+其实 ~ 表示模式开始。/ /中是模式。这就是一个正则表达式的匹配。
+
+其实awk可以像grep一样的去匹配一行，就像这样：
+ awk '/LISTEN/' netstat.txt
+
+ 我们可以使用 “/FIN|TIME/” 来匹配 FIN 或者 TIME :
+ awk '$6 ~ /FIN|TIME/ || NR==1 {print NR,$4,$5,$6}' OFS="\t" netstat.txt
+
+ 再来看看模式取反的例子：
+ awk '$6 !~ /WAIT/ || NR==1 {print NR,$4,$5,$6}' OFS="\t" netstat.txt
+ 或者可以像grep一样
+ awk '!/WAIT/' netstat.txt
+
+ grep 是这样实现上边的功能的 
+ grep -v 'WAIT' netstat.txt
+
+ 折分文件
+awk拆分文件很简单，使用重定向就好了。下面这个例子，是按第6列分隔文件，相当的简单(其中的NR!=1表示不处理表头)
+awk 'NR!=1{print > $6}' netstat.txt  
+
+会生成以第六列的每个项为文件名的文件其中存储着与第六列中项相等的行
+
+你也可以把指定的列输出到文件：不指定就默认输出所有的列
+awk 'NR!=1{print $4,$5 > $6}' netstat.txt
+
+也可以将不同的项输出到自己指定的文件中 (使用if-else if-else)
+awk 'NR!=1{if($6 ~ /TIME|ESTABLISHED/) print > "1.txt";
+else if($6 ~ /LISTEN/) print > "2.txt";
+else print > "3.txt" }' netstat.txt
+
+命令计算所有的C文件，CPP文件和H文件的文件大小总和
+ls -l  *.cpp *.c *.h | awk '{sum+=$5} END {print sum}'
+
+awk 'NR!=1{a[$6]++;} END {for (i in a) print i ", " a[i];}' netstat.txt
+上边可以将[$6] 理解为以第六列每个项为名的一个变量数组
+ps aux | awk 'NR!=1 {a[$1] += $6} END{for(i in a) print  i "," a[i]"KB"}'  
