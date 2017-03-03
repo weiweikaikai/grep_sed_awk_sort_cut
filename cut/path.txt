@@ -1,0 +1,1 @@
+/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/alidata/server/mysql/bin:/alidata/server/nginx/sbin:/alidata/server/php/sbin:/alidata/server/php/bin:/root/bin
